@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div class="row">
+        <div class="col s12 m8">
+            <h3>{{story.title}}
+                <small>{{{editIcon story.user user story._id false}}}</small>
+            </h3>
+            <div class="card story">
+                <div class="card-content">
+                    <span class="card-title">{{formatDate date 'MMMM Do YYYY, h:mm:ss a'}}</span>
+                    {{{story.body}}}
+                </div>
+
+                <div class="row">
+                    <button onclick="actOnPost(event);" data-post-id="{{ this._id }}">Like
+                    </button>
+                    <span id="likes-count-{{ this._id }}">{{ this.likes_count }}</span>
+                </div>
+
+            </div>
+        </div>
+        <div class="col s12 m4">
+            <div class="card center-align">
+                <div class="card-content">
+                    <span class="card-title">{{story.user.displayName}}</span>
+                    <img src="{{story.user.image}}" class="circle responsive-img img-small">
+                </div>
+                <div class="card-action">
+                    <a href="/stories/user/{{story.user._id}}">More From {{story.user.firstName}}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        var updatePostStats = {
+            Like: function (postId) {
+                document.querySelector('#likes-count-' + postId).textContent++;
+            },
+            Unlike: function (postId) {
+                document.querySelector('#likes-count-' + postId).textContent--;
+            }
+        };
+        var toggleButtonText = {
+            Like: function (button) {
+                button.textContent = "Unlike";
+            },
+            Unlike: function (button) {
+                button.textContent = "Like";
+            }
+        };
+        var actOnPost = function (event) {
+            var postId = event.target.dataset.postId;
+            var action = event.target.textContent.trim();
+            toggleButtonText[action](event.target);
+            updatePostStats[action](postId);
+            axios.post('/posts/' + postId + '/act', {
+                action: action,
+                socketId: socketId
+            });
+        };
+    </script>
+
+
+
+    <script src="https://js.pusher.com/4.1/pusher.min.js"></script>
+
+    <script>
+        var pusher = new Pusher('7c0a7f2a26829c604a0f', {
+            cluster: 'ap1'
+        });
+        var socketId;
+        // retrieve the socket ID on successful connection
+        pusher.connection.bind('connected', function () {
+            socketId = pusher.connection.socket_id;
+        });
+        var channel = pusher.subscribe('tutorial');
+        channel.bind('postAction', function (data) {
+            // log message data to console - for debugging purposes
+            console.log(data);
+            var action = data.action;
+            updatePostStats[action](data.postId);
+        });
+    </script>
+
+</body>
+
+</html>
